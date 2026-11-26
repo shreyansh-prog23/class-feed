@@ -66,9 +66,14 @@ Open `/admin.html` on your link. Enter both codes. You see:
 - whether the WhatsApp number is connected (if it says logged out, see Troubleshooting),
 - cards the reader was unsure about, or that classmates flagged with "This is wrong". Fix and save, or delete, and everyone gets the fix within a minute,
 - photos and files it skipped, with the reason, so you can tell if something useful was missed,
+- wrong-answer reports from Ask, including the question, answer and any cards used. Fix or delete a card if it caused the wrong answer, then clear the report,
 - re-file by subject, and Start a new semester (clears every card for everyone, so it asks twice).
 
 Your fixes are remembered and shown to the AI as examples, so it makes the same mistake less often.
+
+## Ask
+
+Classmates can ask about deadlines, classes, exams or notes using the **Ask** tab. Answers use the feed's cards, timetable and academic calendar; available source messages and files are shown so students can check the answer. If an answer is wrong, a student can report it with **This answer is wrong**. The report appears on the CR page; it is for review, not automatic card approval.
 
 ## 5. Let classmates reach it
 

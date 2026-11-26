@@ -127,6 +127,13 @@ export function startServer() {
           const rows = db.prepare('select id,name,photo,section from people order by created asc limit 300').all();
           return send(res, 200, { count: rows.length, people: rows.map(r => ({ name: r.name, photo: r.photo, section: r.section || null, me: !!me && r.id === me })) });
         }
+        if (p === '/api/ask-report' && req.method === 'POST') {
+          const b = await body(req);
+          const list = getKv('ask_reports', []);
+          list.unshift({ t: Date.now(), q: String(b.q || '').slice(0, 300), a: String(b.a || '').slice(0, 500), cards: (Array.isArray(b.cards) ? b.cards : []).slice(0, 5).map(x => String(x).slice(0, 80)), who: String(url.searchParams.get('me') || '').replace(/[^\w-]/g, '').slice(0, 40) });
+          setKv('ask_reports', list.slice(0, 50));
+          return send(res, 200, { ok: true });
+        }
         if (p === '/api/flag' && req.method === 'POST') { const b = await body(req); return send(res, 200, { ok: flagCard(String(b.id)) }); }
         if (p === '/api/push/key') return send(res, 200, { key: publicKey() });
         if (p === '/api/push/subscribe' && req.method === 'POST') { const b = await body(req); return send(res, 200, { ok: subscribe(b.subscription, b.me) }); }
@@ -149,6 +156,7 @@ export function startServer() {
               cards: db.prepare('select count(*) n from cards where deleted=0').get().n,
               flagged: db.prepare('select id,title,subject,flags from cards where deleted=0 and hold=0 and (flags>0 or uncertain=1)').all(),
               held: db.prepare('select * from cards where deleted=0 and hold=1 order by created').all().map(r => { const c = getCard(r.id); return { id: c.id, group: c.group, type: c.type, subject: c.subject, title: c.title, due: c.due, time: c.time, details: c.details, note: c.note, section: c.section, createdAt: c.createdAt, said: (c.sources || []).slice(0, 3).map(x => ({ sender: x.sender, text: x.text })) }; }), holdHours: cfg.holdHours,
+              askReports: getKv('ask_reports', []),
               review: db.prepare('select id from cards where deleted=0 and (hold=1 or flags>0 or uncertain=1) order by hold desc, flags desc, created').all().map(r => { const c = getCard(r.id); return { id: c.id, group: c.group, type: c.type, subject: c.subject, title: c.title, due: c.due, time: c.time, details: c.details, note: c.note, section: c.section, hold: !!c.hold, flags: c.flags || 0, why: /^Poll:/.test(c.note || '') ? 'From a poll. It is already in the feed, but the teacher has not confirmed it. Remove it if it is wrong' : c.hold ? 'Waiting: the AI was not sure, so classmates cannot see it yet' : c.flags ? c.flags + ' classmate' + (c.flags > 1 ? 's' : '') + ' said this looks wrong' : 'The AI was not sure about this one', said: (c.sources || []).slice(0, 3).map(x => ({ sender: x.sender, text: x.text })) }; })
             });
           }
@@ -194,6 +202,11 @@ export function startServer() {
             const c = c0.hold ? releaseCard(c0.id, patch) : patchCard(c0.id, patch);
             notifyChanges(c0.hold ? { added: [c] } : { added: [], updated: [{ card: c, what: 'corrected by the CR' }] }).catch(() => {});
             return send(res, 200, { ok: true, card: { title: c.title, subject: c.subject, type: c.type, due: c.due, time: c.time, section: c.section } });
+          }
+          if (p === '/api/admin/ask-report' && req.method === 'POST') {
+            const b = await body(req);
+            setKv('ask_reports', getKv('ask_reports', []).filter(r => r.t !== Number(b.t)));
+            return send(res, 200, { ok: true });
           }
           if (p === '/api/admin/card' && req.method === 'POST') {
             const b = await body(req);

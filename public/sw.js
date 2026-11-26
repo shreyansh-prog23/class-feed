@@ -1,5 +1,5 @@
 // Keeps the app opening offline, and shows phone alerts sent by the class server.
-const VERSION = 'v1.0';
+const VERSION = 'v1.3';
 const CORE = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {

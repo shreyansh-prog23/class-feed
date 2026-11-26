@@ -39,6 +39,7 @@ small,.muted{opacity:.75} .err{color:var(--hot);font-weight:700}
 <div id="main" hidden>
   <div class="card" id="status"></div>
   <div id="check"></div>
+  <div id="askrep"></div>
 
   <details class="card sec" open><summary>Invite classmates</summary>
     <label>Class name<input id="shname" maxlength="40" placeholder="AI&amp;DS 3rd semester"></label>
@@ -128,6 +129,19 @@ async function load() {
     if (st.aiPausedUntil) $('status').insertAdjacentHTML('beforeend', '<p class="err">AI is busy or over its limit. Reading is paused until ' + esc(new Date(st.aiPausedUntil).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })) + ' and nothing is lost.</p>');
     // One list for everything that needs the CR: cards waiting for approval, cards classmates flagged, cards the AI was unsure about.
     // Rebuilt only when the list changes and never while the CR is typing in it, so nothing they write is lost.
+    // Wrong answers students reported from the Ask tab. A list to read and clear, nothing to approve.
+    const ar = st.askReports || [];
+    const arSig = JSON.stringify(ar.map(r => r.t));
+    if (arSig !== ARQ_SIG) {
+      ARQ_SIG = arSig;
+      $('askrep').innerHTML = ar.length ? '<h2>Wrong answers reported (' + ar.length + ')</h2><p class="muted">Students pressed "This answer is wrong" in Ask. If a card is the cause, fix it in the list above or delete it from the app.</p>' : '';
+      ar.forEach(r => {
+        const d = document.createElement('div'); d.className = 'card';
+        d.innerHTML = '<p><b>' + esc(r.q) + '</b></p><p class="muted">Answer: ' + esc(r.a) + '</p>' + ((r.cards || []).length ? '<p class="muted">Cards used: ' + esc((r.cards || []).join(', ')) + '</p>' : '') + '<p class="muted">' + esc(new Date(r.t).toLocaleString()) + '</p><div class="row"><button class="ghost" data-a="clr">Clear</button></div>';
+        d.addEventListener('click', async e => { if (e.target.dataset.a !== 'clr') return; try { await api('/api/admin/ask-report', { t: r.t }); d.remove(); ARQ_SIG = ''; load(); } catch (x) { alert(x.message); } });
+        $('askrep').appendChild(d);
+      });
+    }
     const rv = st.review || [];
     const sig = JSON.stringify(rv.map(c => [c.id, c.title, c.due, c.time, c.subject, c.flags, c.hold]));
     const typing = document.activeElement && $('check').contains(document.activeElement);
@@ -259,7 +273,7 @@ $('sjsave').onclick = async () => {
 };
 
 let GK = [];
-let SECS = [], SUBS = [], REV_SIG = '', MAY_SIG = '';
+let SECS = [], SUBS = [], REV_SIG = '', MAY_SIG = '', ARQ_SIG = '';
 function gValue(g) { return g.kind === 'ignore' ? 'ignore' : g.kind === 'main' ? 'main' : g.kind === 'section' ? 'sec:' + g.section : 'sub:' + g.subject; }
 let GRP_SIG = '';
 function renderGroups(list) {

@@ -82,6 +82,8 @@ input[type=checkbox]{width:22px;height:22px;accent-color:var(--ink)}
 .quote span{display:block;font-size:14px;font-weight:600;margin-top:2px;white-space:pre-wrap;word-break:break-word}
 .bubble{margin-top:16px;max-width:82%;margin-left:auto;background:var(--ink);color:var(--white);border-radius:22px 22px 6px 22px;padding:10px 16px;font-size:16px;font-weight:700}
 .ans{max-width:94%;border-radius:26px 26px 26px 8px}
+.hl{display:flex;gap:10px;align-items:baseline;width:100%;text-align:left;background:none;border:0;border-top:1.5px solid rgba(26,16,51,.18);padding:9px 0;font:inherit;color:inherit;cursor:pointer}.hl:first-of-type{border-top:0}.hl .k{flex:none;min-width:74px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.03em}.hl .t{flex:1;min-width:0;font-size:15px;font-weight:700;line-height:1.25}.hl .t small{display:block;font-weight:600;font-size:13px;opacity:.75}.hl .w{flex:none;font-size:12px;font-weight:700;opacity:.7}
+.dots{display:inline-flex;gap:6px;align-items:center;padding:6px 0}.dots i{width:10px;height:10px;border-radius:50%;background:var(--ink);opacity:.25;animation:dotp 1.2s infinite ease-in-out}.dots i:nth-child(2){animation-delay:.2s}.dots i:nth-child(3){animation-delay:.4s}@keyframes dotp{0%,80%,100%{opacity:.25;transform:scale(.8)}40%{opacity:1;transform:scale(1.2)}}@media (prefers-reduced-motion:reduce){.dots i{animation:none;opacity:.6}}
 .askbar{position:fixed;left:50%;transform:translateX(-50%);width:min(424px,calc(100% - 36px));bottom:calc(92px + env(safe-area-inset-bottom,0px));display:flex;align-items:center;gap:8px;background:var(--white);border:3px solid var(--ink);border-radius:28px;padding:4px 4px 4px 18px}
 .askbar input{flex:1;min-width:0;border:0;outline:0;background:transparent;min-height:44px;padding:0;font-size:16px;font-weight:600}
 .askbar button{width:44px;height:44px;border:0;border-radius:50%;background:var(--ink);color:var(--white);display:flex;align-items:center;justify-content:center;cursor:pointer}
@@ -603,24 +605,32 @@ function rot() { const r = [-1.8, 1.4, -0.8, 1, -1.2, 0.8]; return r[rotSeq++ % 
 function stickerBig(c) {
   return '<div class="st big ' + colorOf(c.subject) + '" style="--r:' + rot() + 'deg">' +
     (showBurst(c) ? burstSvg(c) : '') +
-    '<div class="row" style="gap:8px"><span class="chip">' + esc(c.subject) + '</span>' + secChip(c) + '<span class="kind">' + esc(TYPES[c.type] || 'Notice') + '</span>' + (c.files && c.files.length ? '<span class="chip light">' + c.files.length + (c.files.length === 1 ? ' file' : ' files') + '</span>' : '') + '</div>' +
+    '<div class="row" style="gap:8px"><span class="chip">' + esc(c.subject) + '</span>' + secChip(c) + cxChip(c) + '<span class="kind">' + esc(TYPES[c.type] || 'Notice') + '</span>' + (c.files && c.files.length ? '<span class="chip light">' + c.files.length + (c.files.length === 1 ? ' file' : ' files') + '</span>' : '') + '</div>' +
     '<h2 class="t-title"><button class="titlebtn" data-act="open" data-id="' + esc(c.id) + '">' + esc(c.title) + '</button></h2>' +
     '<div class="count">' + esc(countdown(c)) + '</div>' +
     '<p class="when">' + esc(whenLine(c)) + '</p>' +
     (c.details ? '<p class="det">' + esc(c.details) + '</p>' : '') +
     (c.uncertain ? '<p class="det">Check this one: ' + esc(c.note || 'some details were unclear') + '</p>' : '') +
-    '<div class="actions"><button class="btn" data-act="done" data-id="' + esc(c.id) + '">Mark done</button><button class="linkbtn" data-act="open" data-id="' + esc(c.id) + '">Details</button></div></div>';
+    '<div class="actions">' + doneBtn(c, 'Mark done') + '<button class="linkbtn" data-act="open" data-id="' + esc(c.id) + '">Details</button></div></div>';
 }
+// Exams, vivas, practicals and tests are not ticked off: they leave the list when the date passes. A cancelled one can be hidden.
+function examLike(c) { return c.type === 'exam' || /\b(viva|practical|class test|mid ?sem|end ?sem|exam)\b/i.test(c.title || ''); }
+function cxCard(c) { return /\bcancel+ed\b/i.test((c.title || '') + ' ' + (c.note || '')); }
+function doneBtn(c, label, cls, style) {
+  if (c.type !== 'assignment' && examLike(c) && !c.done) { if (!cxCard(c)) return ''; label = 'Hide'; }
+  return '<button class="btn' + (cls ? ' ' + cls : '') + '"' + (style ? ' style="' + style + '"' : '') + ' data-act="done" data-id="' + esc(c.id) + '">' + label + '</button>';
+}
+function cxChip(c) { return cxCard(c) ? '<span class="chip red">Cancelled</span>' : ''; }
 function stickerMid(c) {
   const d = c.due ? pd(c.due) : null;
   return '<div class="st ' + colorOf(c.subject) + '" style="--r:' + rot() + 'deg">' + (showBurst(c) ? burstSvg(c) : '') +
     '<div class="row"><div class="day"><div style="font-size:26px">' + (d ? WD[d.getDay()] : '') + '</div><div style="font-family:var(--body);font-size:14px;font-weight:700">' + (d && Math.abs(dayDiff(c.due)) > 6 ? d.getDate() + ' ' + MO[d.getMonth()] + (c.time ? '<br>' + esc(fmtTime(c.time)) : '') : c.time ? esc(fmtTime(c.time)) : d ? d.getDate() + ' ' + MO[d.getMonth()] : '') + '</div></div>' +
-    '<div style="flex:1;min-width:0"><span class="chip">' + esc(c.subject) + '</span>' + secChip(c) + '<div class="t-title" style="margin-top:6px"><button class="titlebtn" data-act="open" data-id="' + esc(c.id) + '">' + esc(c.title) + '</button></div></div>' +
-    '<button class="btn light" style="min-height:44px;padding:0 14px;font-size:14px" data-act="done" data-id="' + esc(c.id) + '">Done</button></div></div>';
+    '<div style="flex:1;min-width:0"><span class="chip">' + esc(c.subject) + '</span>' + secChip(c) + cxChip(c) + '<div class="t-title" style="margin-top:6px"><button class="titlebtn" data-act="open" data-id="' + esc(c.id) + '">' + esc(c.title) + '</button></div></div>' +
+    doneBtn(c, 'Done', 'light', 'min-height:44px;padding:0 14px;font-size:14px') + '</div></div>';
 }
 function stickerSmall(c, past) {
   const d = c.due ? pd(c.due) : null;
-  return '<button class="st small ' + colorOf(c.subject) + (past ? ' past' : '') + '" style="--r:' + rot() + 'deg" data-act="open" data-id="' + esc(c.id) + '"><span class="row"><span style="font-family:var(--display);font-size:15px;line-height:1.1;min-width:76px">' + (d ? WD[d.getDay()] + ' ' + d.getDate() : 'No date') + '</span><span style="flex:1;font-size:15px;font-weight:800;line-height:1.2">' + esc(c.subject) + ': ' + esc(c.title) + '</span>' + (c.done ? '<span class="chip light">done</span>' : '') + '</span></button>';
+  return '<button class="st small ' + colorOf(c.subject) + (past ? ' past' : '') + '" style="--r:' + rot() + 'deg" data-act="open" data-id="' + esc(c.id) + '"><span class="row"><span style="font-family:var(--display);font-size:15px;line-height:1.1;min-width:76px">' + (d ? WD[d.getDay()] + ' ' + d.getDate() : 'No date') + '</span><span style="flex:1;font-size:15px;font-weight:800;line-height:1.2">' + esc(c.subject) + ': ' + esc(c.title) + '</span>' + (c.done ? '<span class="chip light">done</span>' : cxChip(c)) + '</span></button>';
 }
 
 // ---------- academic calendar (NIT Kurukshetra, 2026-27) ----------
@@ -826,6 +836,42 @@ function classesBlock() {
   loose.forEach(c => { h += '<button class="st small ' + colorOf(c.subject) + '" style="--r:' + rot() + 'deg" data-act="open" data-id="' + esc(c.id) + '"><span class="row"><span style="flex:1;font-size:15px;font-weight:800;line-height:1.2">' + esc(c.subject && c.subject !== 'General' ? c.subject + ': ' : '') + esc(c.title) + '</span><span class="chip light">From your chat</span></span></button>'; });
   return h;
 }
+// One card for the day: what the groups posted that day, in the order it arrived. It fills in as the day goes on and stays for earlier days.
+function dayHighlights(ds) {
+  const out = [];
+  const stampOf = c => (c.sources && c.sources[0] && c.sources[0].ms) || c.createdAt || 0;
+  const on = ms => ms && ymd(new Date(ms)) === ds;
+  const CH = { cancelled: 'Cancelled', cancelled_all: 'No classes', rescheduled: 'Moved', extra: 'Extra class', restored: 'Back on' };
+  S.cards.forEach(c => {
+    if (c.hold) return;
+    const ms = stampOf(c);
+    let k = '', sub = '';
+    if (on(ms)) {
+      if (c.type === 'class_change') { k = CH[chgOf(c)] || 'Class update'; }
+      else if (c.type === 'exam') { k = 'Exam'; sub = c.due ? fmtDate(c.due) + (c.time ? ', ' + c.time : '') : ''; }
+      else if (c.type === 'assignment') { k = 'Deadline'; sub = c.due ? 'Due ' + fmtDate(c.due) + (c.time ? ', ' + c.time : '') : ''; }
+      else if (c.type === 'material' || c.type === 'syllabus') { k = c.type === 'syllabus' ? 'Syllabus' : 'Notes'; sub = (c.files || []).length ? (c.files.length === 1 ? '1 file' : c.files.length + ' files') : ''; }
+      else { k = 'Notice'; }
+      out.push({ c, ms, k, sub, red: /cancel|no classes/i.test(k) });
+    } else {
+      const hs = (c.history || []).filter(h => on(h.at));
+      if (hs.length) out.push({ c, ms: hs[hs.length - 1].at, k: 'Updated', sub: String(hs[hs.length - 1].what || '').slice(0, 60), red: false });
+    }
+  });
+  return out.sort((a, b) => a.ms - b.ms);
+}
+function highlightsBlock() {
+  const n = now0(), today = ymd(n), ds = selDate();
+  if (ds > today) return '';
+  const isToday = ds === today;
+  const title = isToday ? 'Today’s highlights' : dayDiff(ds) === -1 ? 'Yesterday’s highlights' : DAYS_LONG[new Date(ds + 'T00:00:00').getDay()] + '’s highlights';
+  const list = dayHighlights(ds);
+  let h = '<h2 class="sect">' + esc(title) + '</h2>';
+  if (!list.length) return h + '<div class="st dashed" style="--r:.6deg"><p class="det" style="margin-top:0">' + (isToday ? 'Nothing new yet today. It fills in as your groups post.' : 'Nothing was posted this day.') + '</p></div>';
+  const show = list.slice(0, 8);
+  h += '<div class="st c-sun" style="--r:-.6deg">' + show.map(x => '<button type="button" class="hl" data-act="open" data-id="' + esc(x.c.id) + '"><span class="k">' + (x.red ? '<span class="chip red">' + esc(x.k) + '</span>' : esc(x.k)) + '</span><span class="t">' + esc((x.c.subject && x.c.subject !== 'General' ? x.c.subject + ': ' : '') + x.c.title) + (x.sub ? '<small>' + esc(x.sub) + '</small>' : '') + '</span><span class="w">' + esc(new Date(x.ms).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })) + '</span></button>').join('') + (list.length > show.length ? '<p class="det" style="margin-bottom:0">+ ' + (list.length - show.length) + ' more</p>' : '') + '</div>';
+  return h;
+}
 function comingUp() {
   const t = ymd(now0());
   const list = calFrom(t).filter(e => e.kind !== 'reg' && dayDiff(e.start) <= 150).slice(0, 3);
@@ -845,7 +891,7 @@ function todayExtras() {
   }
   const xc = nextExamCard();
   if (xc) { const a = dayDiff(xc.due); if (a <= 30) top += '<button class="banner" data-act="open" data-id="' + esc(xc.id) + '" style="width:100%;text-align:left">Next exam: ' + esc(xc.title) + ', ' + esc(fmtDate(xc.due)) + (xc.time ? ' at ' + esc(fmtTime(xc.time)) : '') + '. ' + (a === 0 ? 'Today.' : a === 1 ? 'Tomorrow.' : 'In ' + a + ' days.') + '</button>'; }
-  top += weekStrip() + classesBlock();
+  top += weekStrip() + classesBlock() + highlightsBlock();
   const hasTT = !!allSlots0();
   const ups = S.cards.filter(c => !c.done && c.type === 'class_change' && c.due && dayDiff(c.due) >= (hasTT ? 1 : 0) && dayDiff(c.due) <= 7).sort((a, b) => (a.due < b.due ? -1 : 1)).slice(0, 4);
   if (ups.length) {
@@ -1215,16 +1261,20 @@ let askDraft = '';
 let askBusy = false;
 function viewAsk() {
   document.body.dataset.mood = 'orange';
-  let h = '<div class="top"><div class="pill">Ask</div></div><h1 class="hero" style="font-size:clamp(30px,9.5vw,38px);line-height:1.05">Ask your groups.</h1>' + (asks.length ? '' : '<p class="sub">For example: What is due this week? When is the Software Engineering exam?</p>');
+  let h = '<div class="top"><div class="pill">Ask</div></div><h1 class="hero" style="font-size:clamp(30px,9.5vw,38px);line-height:1.05">Ask your groups.</h1>' + (asks.length ? '' : '<p class="sub">Ask about deadlines, classes, exams or notes. Tap one to start:</p>' + (S.cards.length ? askChips(askStarters()) : ''));
   if (!S.cards.length) h += '<p class="sub">Import a chat first, then ask about deadlines and notes.</p>';
   asks.forEach(a => {
+    const ai = asks.indexOf(a);
     h += '<div class="bubble">' + esc(a.q) + '</div>';
-    if (a.loading) h += '<div class="st ans dashed" style="--r:.6deg"><p class="det" style="margin-top:0">Thinking…</p></div>';
-    else if (a.err) h += '<div class="err">' + esc(a.err) + '</div>';
+    if (a.loading) h += '<div class="st ans dashed" style="--r:.6deg"><span class="dots" role="status" aria-label="Thinking"><i></i><i></i><i></i></span><p class="det" id="askSlow" style="margin-top:0"' + (a.slow ? '' : ' hidden') + '>Still working. The AI is busy, this can take a moment.</p></div>';
+    else if (a.local) h += '<div class="st ans dashed" style="--r:.6deg"><div class="t-title" style="margin-top:0;font-size:18px">' + esc(a.local.text) + '</div>' + askChips(a.local.chips) + '</div>';
+    else if (a.err) h += '<div class="err">' + esc(a.err) + '</div>' + askChips([{ l: 'Try again', q: a.retry || a.q }]);
     else {
       h += '<div class="st ans ' + (a.found ? 'c-sun' : 'dashed') + '" style="--r:' + (a.found ? '-1' : '.8') + 'deg"><div class="t-title" style="margin-top:0;font-size:' + (a.found ? '20' : '18') + 'px">' + esc(a.answer) + '</div>';
       (a.sources || []).slice(0, 2).forEach(q => { h += '<div class="quote"><b>' + esc(q.sender) + ', ' + esc(fmtWhen(q.ms)) + '</b><span>' + esc(q.text) + '</span></div>'; });
       h += fileRows(a.files);
+      if (a.found && !(a.sources || []).length && (a.source === 'timetable' || a.source === 'calendar')) h += '<p class="det">From your ' + (a.source === 'calendar' ? 'academic calendar' : 'timetable') + '.</p>';
+      if (FEED && feedCode()) h += a.reported ? '<p class="det">Sent to your CR. Thanks.</p>' : '<button type="button" class="linkbtn" data-act="askwrong" data-i="' + ai + '">This answer is wrong</button>';
       h += '</div>';
     }
   });
@@ -1232,29 +1282,82 @@ function viewAsk() {
   if (!sampleFn) h += '<p class="note">Asking needs Claude, which isn’t available in this view.</p>';
   return h;
 }
-async function doAsk() {
+function askChips(list) { return list && list.length ? '<div class="chips">' + list.map(c => '<button type="button" class="fchip" data-act="askchip" data-q="' + esc(c.q) + '">' + esc(c.l) + '</button>').join('') + '</div>' : ''; }
+function askStarters() { return [{ l: 'Due this week', q: 'What is due this week?' }, { l: 'Classes tomorrow', q: 'What classes do I have tomorrow?' }, { l: 'Next exam', q: 'When is my next exam?' }, { l: 'Notes', q: 'notes' }]; }
+function askNorm(q) { return String(q).toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim(); }
+function askSubs(kind) {
+  const m = {};
+  S.cards.forEach(c => { if (!c.subject || c.done && kind === 'exam') return; if (kind === 'notes' ? (c.type === 'material' || c.type === 'syllabus' || (c.files || []).length) : kind === 'syllabus' ? c.type === 'syllabus' : c.type === 'exam') m[c.subject] = (m[c.subject] || 0) + 1; });
+  return Object.keys(m);
+}
+// Answers on the phone, with no AI call, for greetings, nonsense, off-topic and one-word questions. Returns null when the AI should answer.
+function askLocal(q) {
+  const n = askNorm(q), hint = askStarters();
+  const mk = (text, chips) => ({ local: { text, chips: chips === undefined ? hint : chips } });
+  const subs = [...new Set(S.cards.map(c => c.subject).filter(Boolean))];
+  const sub = subs.find(x => askNorm(x) === n);
+  if (sub) return mk('What about ' + sub + '?', [{ l: 'Deadlines', q: 'What is due in ' + sub + '?' }, { l: 'Next class', q: 'When is my next ' + sub + ' class?' }, { l: 'Notes', q: 'What notes and files are there for ' + sub + '?' }, { l: 'Exam', q: 'When is the ' + sub + ' exam?' }]);
+  if (/^(hi+|hello+|hey+|heya|yo|sup|hola|namaste|good (morning|afternoon|evening))( there| bro| man| buddy)?$/.test(n)) return mk('Hi! I can answer from your class groups. What do you want to know?');
+  if (/^(thanks|thank you|thx|ty|ok|okay|cool|nice|great|got it|thanks a lot)$/.test(n)) return mk('Anytime. Ask me anything else about your classes.', []);
+  const classy = /\b(deadline|exam|class|lab|assignment|due|notes?|syllabus|quiz|timetable|submit|submission|lecture|attendance|marks?|result|holiday|test)\b/.test(n);
+  if (!/[a-z0-9]/.test(n) || /^(.)\1+$/.test(n.replace(/ /g, '')) || (n.length < 3 && !classy) || (!/ /.test(n) && n.length >= 4 && !/[aeiou]/.test(n)) || /^(asdf|qwer|zxcv|hjkl|sdfg|dfgh|qwe|asd|zxc)/.test(n)) return mk('I didn’t get that. Ask me about a deadline, class, exam or notes.');
+  if (/^(help|what can you do|how does this work|how to use)$/.test(n)) return mk('I read your class groups and answer from them: deadlines, classes, exams, notes and files. I show the original message so you can check me.');
+  if (/\b(fuck|shit|bitch|bc|mc|chutiya|madarchod|bhenchod|gaand|idiot|stupid|useless|dumb|sucks)\b/.test(n)) return mk('Let’s keep it friendly. I’m happy to help with deadlines, classes, exams or notes.');
+  if (/ignore (all |your |the |previous )?(rules|instructions)|system prompt|jailbreak|pretend (you|to be)|you are now|\bact as\b/.test(n) || (!classy && /\b(joke|poem|song|story|weather|recipe|movie|ipl|cricket|bitcoin|stock|crush|girlfriend|boyfriend|love|translate|essay|capital of|prime minister|president|who are you|your name|meaning of life|write (me )?(a |an )?(code|program))\b/.test(n))) return mk('I’m only the class assistant, so I know what’s in your groups: deadlines, classes, exams and notes. Try one of these.');
+  const one = (list, text, f) => list.length === 1 ? { rewrite: f(list[0]) } : list.length ? mk(text, list.slice(0, 8).map(x => ({ l: x, q: f(x) }))) : mk('Nothing like that in your groups yet.', []);
+  if (/^(notes?|study material|materials?|pdfs?|files?|slides|ppts?|books?)$/.test(n)) return one(askSubs('notes'), 'Notes for which subject?', x => 'What notes and files are there for ' + x + '?');
+  if (n === 'syllabus') return one(askSubs('syllabus'), 'Syllabus for which subject?', x => 'What is the ' + x + ' syllabus?');
+  if (/^(exams?|tests?|quiz|quizzes)$/.test(n)) return one(askSubs('exam'), 'Which exam?', x => 'When is the ' + x + ' exam, and what does it cover?');
+  if (/^(deadlines?|due|assignments?|submissions?|homework)$/.test(n)) return { rewrite: 'What is due this week?' };
+  if (/^(class|classes|lab|labs|lecture|lectures|timetable|schedule)$/.test(n)) return mk('Which day?', [{ l: 'Today', q: 'What classes do I have today?' }, { l: 'Tomorrow', q: 'What classes do I have tomorrow?' }, { l: 'My lab', q: 'When is my next lab?' }]);
+  return null;
+}
+// Picks the cards that matter for this question: ones that match its words, what is coming up, and the newest.
+function askCards(q) {
+  const stop = new Set(['the', 'and', 'for', 'when', 'what', 'which', 'is', 'are', 'my', 'any', 'have', 'about', 'next', 'this', 'that', 'there', 'with', 'from', 'tell', 'give', 'show', 'me']);
+  const words = askNorm(q).split(' ').filter(w => w.length > 1 && !stop.has(w));
+  const today = ymd(new Date());
+  const wantOld = /cancel|done|finished|old|past|previous|earlier/.test(askNorm(q));
+  const scored = S.cards.filter(c => wantOld || (!c.done && !cxCard(c))).map((c, i) => {
+    const sub = String(c.subject || '').toLowerCase(), ti = String(c.title || '').toLowerCase(), de = String(c.details || '').toLowerCase();
+    let sc = i / S.cards.length, hit = 0;
+    words.forEach(w => { if (sub.includes(w)) hit += 5; if (ti.includes(w)) hit += 3; if (de.includes(w)) hit += 1; });
+    sc += hit; if (c.due && c.due >= today && !c.done) sc += 4; if (c.type === 'exam') sc += 1; if (c.done) sc -= 3;
+    return { c, sc, hit };
+  });
+  scored.sort((a, b) => b.sc - a.sc);
+  return scored.slice(0, 120).map(x => x.c);
+}
+async function doAsk(given) {
   const inp = $('askIn');
-  const q = (inp ? inp.value : askDraft).trim();
-  if (!q || askBusy || !sampleFn) return;
-  askBusy = true; askDraft = '';
-  const entry = { q, loading: true };
+  const q = String(given || (inp ? inp.value : askDraft)).trim().slice(0, 300);
+  if (!q || askBusy) return;
+  askDraft = '';
+  const loc = askLocal(q);
+  if (loc && loc.local) { asks.push({ q, local: loc.local }); render(); window.scrollTo(0, document.body.scrollHeight); return; }
+  if (!sampleFn) return;
+  const shown = q, asked = loc && loc.rewrite ? loc.rewrite : q;
+  askBusy = true;
+  const entry = { q: shown, loading: true };
+  const hist = asks.filter(a => a.answer && !a.local).slice(-3).map(a => ({ q: a.q, a: a.answer }));
   asks.push(entry); render();
+  entry.timer = setTimeout(() => { entry.slow = true; const e = $('askSlow'); if (e) e.hidden = false; }, 8000);
   window.scrollTo(0, document.body.scrollHeight);
-  const cards = S.cards.slice(-120).map(c => ({ id: c.id, type: c.type, subject: c.subject, title: c.title, due: c.due, time: c.time, details: c.details, done: c.done, files: (c.files || []).map(f => f.name), photo: c.extract ? (c.extract.summary + ' ' + (c.extract.topics && c.extract.topics.length ? 'Topics: ' + c.extract.topics.join(', ') + '. ' : '') + c.extract.text).slice(0, 800) : undefined, messages: (c.sources || []).slice(0, 3).map(s => ({ when: fmtWhen(s.ms), sender: s.sender, text: s.text })) }));
+  const cards = askCards(asked).map(c => ({ id: c.id, type: c.type, subject: c.subject, title: c.title, due: c.due, time: c.time, details: c.details, done: c.done, files: (c.files || []).map(f => f.name), photo: c.extract ? (c.extract.summary + ' ' + (c.extract.topics && c.extract.topics.length ? 'Topics: ' + c.extract.topics.join(', ') + '. ' : '') + c.extract.text).slice(0, 800) : undefined, messages: (c.sources || []).slice(0, 3).map(s => ({ when: fmtWhen(s.ms), sender: s.sender, text: s.text })) }));
   const now = new Date();
   const prompt = 'You answer a college student’s question using ONLY the cards, the academic calendar and the timetable below. Each card was extracted from their class group chat and carries the original messages.\n' +
     'Today is ' + WDL[now.getDay()] + ' ' + now.getDate() + ' ' + MO[now.getMonth()] + ' ' + now.getFullYear() + '.\n' +
-    'Rules: answer only from the cards and their messages. Never guess a date. Cards may list file names; if the student asks for a file or notes, name the matching card and say the file is attached to it. If the answer is not in them, set "found" to false and answer "Couldn’t find that in your groups." and, only if a card is close, add one short sentence naming it. Otherwise answer in one or two short plain sentences.\n' +
-    'Reply with only JSON: {"found": true or false, "answer": "text", "cards": ["ids of the cards you used"]}\n\nCards:\n' + JSON.stringify(cards) + '\n\nAcademic calendar (official, NIT Kurukshetra): ' + JSON.stringify(CALEV.filter(e => e.end >= ymd(now)).map(e => ({ from: e.start, to: e.end, title: e.title, kind: e.kind }))) + '\n\nWeekly timetable (day 1 is Monday): ' + JSON.stringify(mySlots()) + '\n\nQuestion: ' + q;
+    (S.me && S.me.section ? 'The student is in section ' + S.me.section + '. When they say “my lab” or “my class”, use only that section’s slots and cards, plus ones for everyone.\n' : '') + (hist.length ? 'Earlier in this chat, for follow-ups like “and the next one?”: ' + JSON.stringify(hist) + '\n' : '') + 'Rules: answer only from the cards and their messages. Never guess a date. Cards may list file names; if the student asks for a file or notes, name the matching card and say the file is attached to it. If the answer is not in them, set "found" to false and answer "Couldn’t find that in your groups." and, only if a card is close, add one short sentence naming it. Otherwise answer in one or two short plain sentences.\n' +
+    'Reply with only JSON: {"found": true or false, "answer": "text", "cards": ["ids of the cards you used"], "source": "cards" or "timetable" or "calendar", whichever the answer mainly came from}\n\nCards:\n' + JSON.stringify(cards) + '\n\nAcademic calendar (official, NIT Kurukshetra): ' + JSON.stringify(CALEV.filter(e => e.end >= ymd(now)).map(e => ({ from: e.start, to: e.end, title: e.title, kind: e.kind }))) + '\n\nWeekly timetable (day 1 is Monday): ' + JSON.stringify(mySlots()) + '\n\nQuestion: ' + asked;
   try {
     const r = await sampleFn.json(prompt, { modelTier: 'quick' });
-    entry.found = !!(r && r.found);
+    entry.found = !!(r && r.found); entry.source = String((r && r.source) || '');
     entry.answer = String((r && r.answer) || 'Couldn’t find that in your groups.');
-    const ids = Array.isArray(r && r.cards) ? r.cards : [];
+    const ids = Array.isArray(r && r.cards) ? r.cards : []; entry.ids = ids;
     entry.sources = []; entry.files = [];
     ids.forEach(id => { const c = S.cards.find(x => x.id === id); if (c && c.sources && c.sources[0]) entry.sources.push(c.sources[0]); if (c && c.files) entry.files = entry.files.concat(c.files); });
-  } catch (e) { entry.err = sampleError(e); }
-  entry.loading = false; askBusy = false; render();
+  } catch (e) { entry.err = e && e.code === 'rate_limited' ? 'The AI is busy right now. Try again in a minute.' : sampleError(e); entry.retry = asked; }
+  clearTimeout(entry.timer); entry.loading = false; askBusy = false; render();
   window.scrollTo(0, document.body.scrollHeight);
 }
 
@@ -1369,7 +1472,7 @@ function finishedCards() {
   return S.cards.filter(c => c.type !== 'syllabus' && c.type !== 'material' && (c.done || (c.due && dueMs(c) < now)));
 }
 function dotsBtn() { return '<button class="dots" data-act="more" aria-label="More options" aria-expanded="' + moreOpen + '"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"></circle><circle cx="12" cy="12" r="2"></circle><circle cx="12" cy="19" r="2"></circle></svg></button>'; }
-const APP_BUILD = 'v1.0 (26 Nov)';
+const APP_BUILD = 'v1.3 (26 Nov)';
 function isJunkCard(c) { return !!((c.files && c.files.length && c.files.every(f => isNoiseFile(f.name))) || /^(STK|GIF|PTT|AUD)[-\s]?\d/i.test(c.title || '') || /^stickers?\b/i.test(c.title || '')); }
 function junkCards() { return S.cards.filter(isJunkCard); }
 let tidyMsg = '';
@@ -2026,7 +2129,7 @@ function openSheet(id) {
     checkBlock(c) +
     (q ? '<p class="field" style="font-weight:800;font-size:13px;margin-bottom:0">From the chat</p>' + q : '') + hist +
     '<div id="wrongBox" hidden><label class="field"><span>What should it have said? (optional)</span><textarea id="f-why"></textarea></label><p class="note">Fix the fields above and press Save, or press Delete if this isn’t a real item. The app learns from it.</p></div>' +
-    '<div class="actions" style="flex-wrap:wrap;justify-content:flex-start"><button class="btn" data-sheet="save">Save</button><button class="btn light" data-sheet="done">' + (c.done ? 'Reopen' : 'Mark done') + '</button>' + ((c.sources || []).length ? '<button class="btn ghost" data-sheet="wrong">This is wrong</button>' : '') + '<button class="btn ghost" data-sheet="delete">Delete</button><button class="btn ghost" data-sheet="close">Close</button></div>';
+    '<div class="actions" style="flex-wrap:wrap;justify-content:flex-start"><button class="btn" data-sheet="save">Save</button>' + (c.done ? '<button class="btn light" data-sheet="done">Reopen</button>' : (c.type !== 'assignment' && examLike(c) ? (cxCard(c) ? '<button class="btn light" data-sheet="done">Hide</button>' : '') : '<button class="btn light" data-sheet="done">Mark done</button>')) + '' + ((c.sources || []).length ? '<button class="btn ghost" data-sheet="wrong">This is wrong</button>' : '') + '<button class="btn ghost" data-sheet="delete">Delete</button><button class="btn ghost" data-sheet="close">Close</button></div>';
   if (FEED && !feedAdmin()) { const sv = d.querySelector('[data-sheet="save"]'); if (sv) sv.style.display = 'none'; const dl2 = d.querySelector('[data-sheet="delete"]'); if (dl2) dl2.textContent = 'Hide for me'; d.querySelectorAll('input,textarea').forEach(i => { if (i.id !== 'f-why') i.readOnly = true; }); const wb = $('wrongBox'); if (wb) wb.remove(); }
   if (!d.open) d.showModal();
   d.querySelectorAll('[data-thumb]').forEach(img => { getFile(img.dataset.thumb).then(b => { if (!b) return; const fr = new FileReader(); fr.onload = () => { img.src = fr.result; }; fr.readAsDataURL(b); }).catch(() => {}); });
@@ -2181,6 +2284,8 @@ app.addEventListener('click', e => {
   else if (FEED && feedAct(a, t)) { /* handled */ }
   else if (a === 'done') { const c = S.cards.find(x => x.id === t.dataset.id); if (c) { c.done = true; save(); render(); } }
   else if (a === 'ask') doAsk();
+  else if (a === 'askchip') doAsk(t.dataset.q);
+  else if (a === 'askwrong') { const e = asks[+t.dataset.i]; if (e && !e.reported) { e.reported = true; feedApi('/api/ask-report', { body: { q: e.q, a: e.answer, cards: e.ids || [] } }).catch(() => {}); render(); } }
   else if (a === 'read') runImport();
   else if (a === 'stop') { if (ctl) ctl.abort(); }
   else if (a === 'range' && P) { const n = +t.dataset.d; P.start = clampStart(n ? addDays(ymd(now0()), -n) : semesterStart()); render(); }
@@ -2404,6 +2509,7 @@ function feedSheet(c, d, act, b) {
 }
 // ---------- who is using the app ----------
 if (!S.me || typeof S.me !== 'object') S.me = null;
+S.cards.forEach(c => { if (c.done && c.type !== 'assignment' && examLike(c) && !cxCard(c) && c.due && c.due >= ymd(new Date())) c.done = false; });
 let people = [], peopleAt = 0;
 const AV_COL = ['var(--pink)', 'var(--lime)', 'var(--sky)', 'var(--sun)', 'var(--orange)', 'var(--lilac)'];
 function avatar(p, size) {
