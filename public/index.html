@@ -918,9 +918,9 @@ function a2hsSteps() {
   const steps = /iphone|ipad|ipod/i.test(ua)
     ? ['Tap the Share button in Safari (the square with an arrow).', 'Scroll down and tap “Add to Home Screen”.', 'Tap Add.']
     : /android/i.test(ua)
-      ? ['Tap the three dots at the top right of your browser.', 'Tap “Add to Home screen” (or “Install app”).', 'Tap Add.']
+      ? ['Open this page in Chrome and tap the three dots at the top right.', 'Tap “Add to Home screen”, then choose “Create shortcut” if it asks. Use “Install app” only if it works for you.', 'Tap Add.']
       : ['Open your browser’s menu.', 'Choose “Install” or “Add to Home screen”, or bookmark this page.'];
-  return '<ol class="tl" style="font-size:15px;font-weight:700">' + steps.map(x => '<li>' + x + '</li>').join('') + '</ol>' + (inFrame() ? '<p class="note">This saves a shortcut to the page you opened.</p>' : '');
+  return '<ol class="tl" style="font-size:15px;font-weight:700">' + steps.map(x => '<li>' + x + '</li>').join('') + '</ol>' + (/android/i.test(ua) ? '<p class="note">If your phone shows a warning about an older version of Android, it is harmless: it is only Android checking the small app Chrome makes. Updating Chrome in the Play Store usually clears it. “Create shortcut” avoids it completely, and you can always just open the link in your browser.</p>' : '') + (inFrame() ? '<p class="note">This saves a shortcut to the page you opened.</p>' : '');
 }
 function a2hsCard() {
   if (isStandalone() || S.a2hsDismissed || !S.tourDone) return '';
@@ -1369,7 +1369,7 @@ function finishedCards() {
   return S.cards.filter(c => c.type !== 'syllabus' && c.type !== 'material' && (c.done || (c.due && dueMs(c) < now)));
 }
 function dotsBtn() { return '<button class="dots" data-act="more" aria-label="More options" aria-expanded="' + moreOpen + '"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"></circle><circle cx="12" cy="12" r="2"></circle><circle cx="12" cy="19" r="2"></circle></svg></button>'; }
-const APP_BUILD = 'build 57 (26 Nov)';
+const APP_BUILD = 'v1.0 (26 Nov)';
 function isJunkCard(c) { return !!((c.files && c.files.length && c.files.every(f => isNoiseFile(f.name))) || /^(STK|GIF|PTT|AUD)[-\s]?\d/i.test(c.title || '') || /^stickers?\b/i.test(c.title || '')); }
 function junkCards() { return S.cards.filter(isJunkCard); }
 let tidyMsg = '';
@@ -1432,6 +1432,7 @@ function cleanBox() {
   h += '<p class="note">' + note + '</p><div class="actions" style="justify-content:flex-start"><button class="btn" data-act="clean"' + (can ? '' : ' disabled') + '>' + (resetArm === 'clean' ? 'Tap again to confirm' : label) + '</button></div></div>';
   return h;
 }
+let shareNote = '';
 function menuPanel() {
   let h = '<div class="panel">';
   if (cleanMsg) h += '<div class="err" style="margin-top:0;margin-bottom:8px">' + esc(cleanMsg) + '</div>';
@@ -1439,6 +1440,7 @@ function menuPanel() {
   h += '<div class="mrow"><span>Add to home screen<small>Opens like an app</small></span><button class="btn ghost sm" data-act="' + (deferredInstall ? 'install' : 'a2hs') + '">' + (deferredInstall ? 'Install' : (a2hsOpen ? 'Hide' : 'Show')) + '</button></div>' + (a2hsOpen && !deferredInstall ? '<div style="padding:0 0 8px">' + a2hsSteps() + '</div>' : '');
   if (!FEED || isCR()) h += '<a class="mrow" href="#timetable"><span>Timetable<small>' + (FEED ? 'Set the class timetable for everyone' : 'Add or change your classes') + '</small></span></a>';
   h += '<a class="mrow" href="#calendar"><span>Academic calendar<small>Exams, holidays, breaks</small></span></a>';
+  if (FEED) h += '<div class="mrow"><span>Share ClassFeed<small>' + esc(shareNote || 'Send the link and class code to a classmate') + '</small></span><button class="btn ghost sm" data-act="shareapp">Share</button></div>';
   if (!FEED && !IN_CLAUDE && CFG.aiEndpoint) h += '<div class="mrow"><span>Class code<small>Needed to read chats</small></span><span class="fbtns"><input id="classcode" type="text" aria-label="Class code" style="width:110px;min-height:40px;border:2px solid var(--ink);border-radius:12px;padding:0 10px;font-size:14px;font-weight:700;background:var(--white)" value="' + esc(localStorage.getItem('class-code') || '') + '"><button class="btn ghost sm" data-act="savecode">Save</button></span></div>';
   const nsp = S.cards.filter(c => isPhotoCard(c) || isPdfCard(c)).length;
   if (!FEED && nsp) h += '<div class="mrow"><span>Check saved files<small>' + nsp + ' photo or PDF card' + (nsp === 1 ? '' : 's') + ' from earlier imports</small></span><button class="btn ghost sm" data-act="chkphotos"' + (sampleFn && !photoBusy ? '' : ' disabled') + '>' + (photoBusy ? 'Checking…' : 'Check') + '</button></div>';
@@ -2358,6 +2360,18 @@ function feedAct(a, t) {
   if (a === 'feedalerts') { feedAlerts(); return true; }
   if (a === 'pfpick') { const f = $('pfp'); if (f) f.click(); return true; }
   if (a === 'rename') { askName(null, S.me && S.me.name); return true; }
+  if (a === 'shareapp') {
+    const text = '\u{1F393} Join our class on ClassFeed\n\nDeadlines, cancelled classes, exam dates and notes from our WhatsApp groups, sorted in one place.\n\n1. Open: ' + location.origin + '/\n2. Class code: ' + feedCode() + '\n3. Optional: add it to your home screen and turn on alerts. Nothing to install.';
+    const note = m => { shareNote = m; render(); setTimeout(() => { shareNote = ''; render(); }, 3500); };
+    (async () => {
+      try { if (navigator.share) { await navigator.share({ text }); return; } throw new Error('no share'); }
+      catch (e) {
+        if (e && e.name === 'AbortError') return;
+        try { await navigator.clipboard.writeText(text); note('Copied. Paste it in a chat.'); } catch (x) { note('Could not share from this browser.'); }
+      }
+    })();
+    return true;
+  }
   if (a === 'secchange') { askSection(null, S.me && S.me.section); return true; }
   if (a === 'crtoggle') { crOpen = !crOpen; render(); return true; }
   if (a === 'alertsoff') { (async () => { try { const reg = await navigator.serviceWorker.ready; const sub = await reg.pushManager.getSubscription(); if (sub) await sub.unsubscribe(); } catch (e) {} S.alertsOn = false; save(); feedMsg = 'Alerts are off on this phone.'; render(); })(); return true; }

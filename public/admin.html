@@ -232,7 +232,7 @@ function histStatus(st) {
 function inviteText() {
   const n = $('shname').value.trim() || 'our class', code = $('cc').value.trim(), link = location.origin + '/';
   $('shcode').value = code; $('shlink').value = link;
-  return '\u{1F393} Join *' + n + '* on ClassFeed\n\nAll our deadlines, class cancellations, exam dates and notes from the WhatsApp groups, sorted in one place. No more scrolling through groups.\n\n1. Open: ' + link + '\n2. Class code: ' + code + '\n3. Add it to your home screen and turn on alerts\n\nTakes a minute.';
+  return '\u{1F393} Join *' + n + '* on ClassFeed\n\nAll our deadlines, class cancellations, exam dates and notes from the WhatsApp groups, sorted in one place. No more scrolling through groups.\n\n1. Open: ' + link + '\n2. Class code: ' + code + '\n3. Optional: add it to your home screen and turn on alerts. Nothing to install.\n\nTakes a minute.';
 }
 function showInvite() { try { localStorage.setItem('class-name', $('shname').value); } catch (e) {} $('shmsg').textContent = inviteText(); }
 try { $('shname').value = localStorage.getItem('class-name') || 'AI&DS 3rd semester'; } catch (e) { $('shname').value = 'AI&DS 3rd semester'; }
