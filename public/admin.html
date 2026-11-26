@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ClassFeed CR</title>
+<style>
+:root{--ink:#1A1033;--bg:#EFE9FF;--card:#fff;--line:#1A1033;--hot:#FF4D8D;--ok:#2E9B5B}
+@media (prefers-color-scheme:dark){:root{--ink:#F3EEFF;--bg:#17112B;--card:#241A44;--line:#F3EEFF}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 system-ui,-apple-system,Segoe UI,sans-serif;padding:16px;max-width:760px;margin-inline:auto}
+h1{font-size:28px;margin:8px 0 4px} h2{font-size:18px;margin:26px 0 8px}
+.card{background:var(--card);border:2px solid var(--line);border-radius:14px;padding:12px;margin:10px 0}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end}
+label{display:flex;flex-direction:column;font-size:12px;font-weight:700;gap:3px;flex:1;min-width:120px}
+input,select{font:inherit;padding:8px;border:2px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);min-height:40px}
+button{font:inherit;font-weight:800;padding:8px 14px;border:2px solid var(--line);border-radius:12px;background:var(--ink);color:var(--bg);min-height:40px;cursor:pointer}
+button.ghost{background:transparent;color:var(--ink)} button.bad{background:var(--hot);color:#fff;border-color:var(--hot)}
+.pill{display:inline-block;padding:2px 10px;border-radius:99px;border:2px solid var(--line);font-size:13px;font-weight:700}
+.ok{background:var(--ok);color:#fff;border-color:var(--ok)} .no{background:var(--hot);color:#fff;border-color:var(--hot)}
+details.sec>summary,details.card>summary{cursor:pointer;font-weight:800;font-size:17px;list-style:none;display:flex;justify-content:space-between;align-items:center}
+details>summary::-webkit-details-marker{display:none}
+details>summary::after{content:'+';font-size:22px;line-height:1}
+details[open]>summary::after{content:'−'}
+details[open]>summary{margin-bottom:8px}
+small,.muted{opacity:.75} .err{color:var(--hot);font-weight:700}
+</style>
+</head>
+<body>
+<h1>ClassFeed CR</h1>
+<p class="muted">Fix what the reader got wrong. Changes reach everyone's phone within a minute.</p>
+
+<details class="card" id="conn" open><summary>Connect</summary><div class="row" style="margin-top:8px">
+  <label>Class code<input id="cc" autocomplete="off"></label>
+  <label>Admin code<input id="ac" type="password" autocomplete="off"></label>
+  <button id="go">Connect</button>
+</div><p id="msg" class="err"></p></details>
+
+<div id="main" hidden>
+  <div class="card" id="status"></div>
+  <div id="check"></div>
+
+  <details class="card sec" open><summary>Invite classmates</summary>
+    <label>Class name<input id="shname" maxlength="40" placeholder="AI&amp;DS 3rd semester"></label>
+    <div class="row" style="margin-top:8px"><label>Class code<input id="shcode" readonly></label><label>App link<input id="shlink" readonly></label></div>
+    <pre id="shmsg" style="white-space:pre-wrap;font:inherit;background:var(--bg);border:2px solid var(--line);border-radius:12px;padding:10px;margin:10px 0 0"></pre>
+    <div class="row" style="margin-top:8px"><button id="shcopy">Copy</button><button class="ghost" id="shshare">Share</button><button class="ghost" id="shwa">WhatsApp</button></div>
+    <p id="shnote" class="muted"></p>
+  </details>
+
+  <details class="card sec"><summary>Subjects</summary>
+    <p class="muted">Every card is filed under one of these, or under General for whole-class news. To rename a subject, change its name and press Save. It changes everywhere, for everyone. "Also called" is what people type for it, like COA, or its course code.</p>
+    <div id="sj"></div><div class="row" style="margin-top:8px"><button id="sjsave">Save</button><button class="ghost" id="sjadd">Add a subject</button></div><p id="sjmsg" class="muted"></p>
+  </details>
+
+  <details class="card sec"><summary>Groups</summary>
+    <p class="muted">Say what each group is. A subject group files everything under that subject. The whole-class group and the section groups are read message by message, and each message goes to its subject or to General. A section group also marks its messages for that section only. Groups set to Ignore are not read at all.</p>
+    <div id="gk"></div><p id="gmsg" class="muted"></p>
+  </details>
+
+  <details class="card sec"><summary>Class timetable</summary>
+    <p class="muted">Set it once here and it shows on every classmate's Today. Upload a photo or PDF of it, check the rows, then save. You can also type or fix rows by hand.</p>
+    <div class="row"><input id="tf" type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" style="flex:1"><button id="tgo">Read it</button></div>
+    <p id="tmsg" class="muted"></p>
+    <div id="trows"></div>
+    <div class="row" style="margin-top:8px"><button class="ghost" id="tadd">Add a class</button><button id="tsave">Save for everyone</button></div>
+  </details>
+
+  <details class="card sec"><summary>Exam date sheet</summary>
+    <p class="muted">Upload a date sheet (PDF or photo). Only your class's papers become exam cards. A date sheet posted in a group is read the same way.</p>
+    <div class="row"><label>Which exams<select id="dk"><option value="">Not sure</option><option value="mid">Mid sem</option><option value="end">End sem</option><option value="practical">Practical</option></select></label></div>
+    <div class="row" style="margin-top:8px"><input id="df" type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" style="flex:1"><button id="dgo">Upload</button></div>
+    <p id="dmsg" class="muted"></p>
+  </details>
+
+  <details class="card sec"><summary>Messages I wasn't sure about <span id="maycount"></span></summary>
+    <p class="muted" id="mayhint">Messages with no date or deadline words are not read, to save AI calls. Press <b>Read this</b> if one matters.</p><div id="maybe"></div>
+  </details>
+
+  <details class="card sec"><summary>Import old chats</summary>
+    <p class="muted">Fill the app with earlier messages. In WhatsApp open the group, tap its name, then <b>Export chat</b>. Choose <b>Include media</b> (a zip) or Without media (a .txt). Upload it here once.</p>
+    <div class="row">
+      <label>Group<select id="hg"></select></label>
+      <label>Only messages from<input id="hs" type="date"></label>
+    </div>
+    <div class="row" style="margin-top:8px"><input id="hf" type="file" accept=".zip,.txt,application/zip,text/plain" style="flex:1"><button id="hgo">Upload</button></div>
+    <progress id="hp" max="100" value="0" hidden style="width:100%;margin-top:8px"></progress>
+    <p id="hmsg" class="muted"></p>
+  </details>
+
+  <details class="card sec"><summary>Files it skipped</summary><div id="skipped"></div></details>
+
+  <details class="card sec"><summary>More</summary>
+    <p class="muted" id="wmsg">Warn this phone if WhatsApp stops listening. Turn alerts on in the app first.</p>
+    <div id="ppl"></div>
+    <div class="row"><button class="ghost" id="wgo">Warn this phone</button><button class="ghost" id="reroute">Re-file cards by subject</button><button class="bad" id="newsem">Start a new semester</button></div>
+  </details>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+try { $('cc').value = localStorage.getItem('class-code') || ''; $('ac').value = localStorage.getItem('admin-code') || ''; } catch (e) {}
+const hdr = () => ({ 'x-class-code': $('cc').value.trim(), 'x-admin-code': $('ac').value.trim(), 'content-type': 'application/json' });
+async function api(path, body) {
+  const r = await fetch(path, { method: body ? 'POST' : 'GET', headers: hdr(), body: body ? JSON.stringify(body) : undefined });
+  if (r.status === 401) throw new Error('Wrong class code or admin code');
+  if (!r.ok) { const j = await r.json().catch(() => ({})); throw new Error(j.error || 'Server said ' + r.status); }
+  return r.json();
+}
+async function load() {
+  $('msg').textContent = '';
+  try {
+    const st = await api('/api/admin/status');
+    try { localStorage.setItem('class-code', $('cc').value.trim()); localStorage.setItem('admin-code', $('ac').value.trim()); } catch (e) {}
+    $('main').hidden = false; $('conn').open = false;
+    const wa = st.whatsapp || {}, up = wa.state === 'connected';
+    $('status').innerHTML =
+      '<p style="margin:0"><span class="pill ' + (up ? 'ok' : 'no') + '">WhatsApp: ' + esc(wa.state || 'unknown') + '</span></p>' +
+      '<p style="margin:8px 0 0">' + esc(st.cards) + ' cards &middot; ' + esc(st.waiting) + ' waiting to be read &middot; AI ' + esc(st.aiCallsToday) + ' of ' + esc(st.aiCap) + ' today</p>' +
+      (st.people ? '<p style="margin:4px 0 0">' + esc(st.people.total) + ' joined &middot; ' + esc(st.people.today) + ' opened it today &middot; ' + esc(st.people.week) + ' in the last 7 days</p>' : '') +
+      '<p class="muted" style="margin:4px 0 0;font-size:13px">' + (st.lastBackup ? 'Last backup ' + esc(st.lastBackup) : 'No backup yet') + '</p>';
+    showInvite(); loadPeopleAdmin(); if (!TT.length) loadTimetable();
+    SECS = st.sections || []; SUBS = st.subjects || []; renderGroups(st.groupKinds || []); if (!document.querySelector('.sjrow')) loadSubjects();
+    if (st.waProblem) $('status').insertAdjacentHTML('afterbegin', '<p class="err"><b>' + esc(st.waProblem.title) + '.</b> ' + esc(st.waProblem.body) + '</p>');
+    histStatus(st);
+    loadMaybe();
+    if (st.aiPausedUntil) $('status').insertAdjacentHTML('beforeend', '<p class="err">AI is busy or over its limit. Reading is paused until ' + esc(new Date(st.aiPausedUntil).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })) + ' and nothing is lost.</p>');
+    // One list for everything that needs the CR: cards waiting for approval, cards classmates flagged, cards the AI was unsure about.
+    // Rebuilt only when the list changes and never while the CR is typing in it, so nothing they write is lost.
+    const rv = st.review || [];
+    const sig = JSON.stringify(rv.map(c => [c.id, c.title, c.due, c.time, c.subject, c.flags, c.hold]));
+    const typing = document.activeElement && $('check').contains(document.activeElement);
+    if (sig !== REV_SIG && !typing) {
+      REV_SIG = sig;
+      $('check').innerHTML = rv.length ? '<h2>Needs your check (' + rv.length + ')</h2><p class="muted">Cards the AI was unsure about, or that classmates flagged. Write what is wrong and the AI fixes the card and sends it to everyone, or fix the boxes yourself, or throw it away.' + (st.holdHours ? ' Waiting cards go live by themselves after ' + esc(st.holdHours) + ' hours.' : '') + '</p>' : '';
+      rv.forEach(c => {
+        const d = document.createElement('div'); d.className = 'card';
+        const said = (c.said || []).map(x => '<p class="muted">' + esc(x.sender || '') + ': "' + esc(String(x.text || '').slice(0, 300)) + '"</p>').join('');
+        d.innerHTML = '<p><b>' + esc(c.title) + '</b> <span class="pill ' + (c.hold ? 'no' : '') + '">' + esc(c.type.replace('_', ' ')) + '</span> <span class="muted">from ' + esc(c.group) + '</span></p><p class="muted"><b>' + esc(c.why) + '.</b>' + (c.note ? ' AI: ' + esc(c.note) : '') + '</p>' + said +
+          '<label style="margin-top:8px">Tell the AI what is wrong<textarea data-ai rows="2" maxlength="500" placeholder="e.g. this is only for AD-02, and it is due Friday 5 pm"></textarea></label>' +
+          '<div class="row" style="margin-top:6px"><button data-a="ai">Fix with AI' + (c.hold ? ' and publish' : '') + '</button><span class="muted" data-r></span></div>' +
+          '<details style="margin-top:8px"><summary class="muted">Or edit it myself</summary><div class="row"><label>Subject<select data-k="subject">' + (SUBS.concat(['General']).includes(c.subject) ? '' : '<option>' + esc(c.subject) + '</option>') + SUBS.concat(['General']).map(x => '<option' + (x === c.subject ? ' selected' : '') + '>' + esc(x) + '</option>').join('') + '</select></label><label>Title<input data-k="title" value="' + esc(c.title) + '"></label>' +
+          '<label>Date<input data-k="due" type="date" value="' + esc(c.due || '') + '"></label><label>Time<input data-k="time" type="time" value="' + esc(c.time || '') + '"></label>' +
+          '<label>For<select data-k="section"><option value="">Whole class</option>' + SECS.map(x => '<option' + (x === c.section ? ' selected' : '') + '>' + esc(x) + '</option>').join('') + '</select></label></div></details>' +
+          '<div class="row" style="margin-top:8px"><button class="ghost" data-a="ok">' + (c.hold ? 'Publish as it is' : 'Looks right') + '</button><button class="bad" data-a="del">Throw away</button></div>';
+        d.addEventListener('click', async e => {
+          const a = e.target.dataset.a; if (!a) return;
+          const r = d.querySelector('[data-r]');
+          try {
+            if (a === 'ai') {
+              const note = d.querySelector('[data-ai]').value.trim(); if (!note) { r.textContent = 'Write what is wrong first.'; return; }
+              e.target.disabled = true; r.textContent = 'The AI is fixing it…';
+              try { await api('/api/admin/revise', { id: c.id, note }); } finally { e.target.disabled = false; }
+            } else if (a === 'del') { await api(c.hold ? '/api/admin/release' : '/api/admin/card', c.hold ? { id: c.id, discard: true } : { id: c.id, delete: true }); }
+            else {
+              const patch = {}; d.querySelectorAll('[data-k]').forEach(i => { patch[i.dataset.k] = i.value.trim() || (i.dataset.k === 'subject' ? 'General' : null); });
+              await api(c.hold ? '/api/admin/release' : '/api/admin/card', { id: c.id, patch });
+            }
+            d.remove(); REV_SIG = ''; load();
+          } catch (x) { r.textContent = x.message; }
+        });
+        $('check').appendChild(d);
+      });
+    }
+    const sk = (await api('/api/admin/skipped')).skipped;
+    $('skipped').innerHTML = sk.length ? sk.map(x => '<p><b>' + esc(x.file_name || x.kind) + '</b> from ' + esc(x.sender) + ' <small>(' + esc(new Date(x.ms).toLocaleDateString()) + ')</small><br><span class="muted">' + esc(x.why || 'no reason saved') + '</span></p>').join('') : '<span class="muted">Nothing skipped.</span>';
+  } catch (e) { $('msg').textContent = e.message; }
+}
+// ---- class timetable ----
+const TD = ['', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+let TT = [];
+function ttRows() {
+  $('trows').innerHTML = TT.length ? TT.slice().map((x, i) => [x, i]).sort((a, b) => a[0].day - b[0].day || (a[0].start || '').localeCompare(b[0].start || '')).map(([x, i]) =>
+    '<div class="row" style="border-top:1px solid #0002;padding:8px 0"><label style="min-width:90px;flex:0 0 90px">Day<select data-ti="' + i + '" data-f="day">' + [1, 2, 3, 4, 5, 6].map(d => '<option value="' + d + '"' + (x.day === d ? ' selected' : '') + '>' + TD[d] + '</option>').join('') + '</select></label>' +
+    '<label style="min-width:100px;flex:0 0 100px">From<input type="time" data-ti="' + i + '" data-f="start" value="' + esc(x.start || '') + '"></label><label style="min-width:100px;flex:0 0 100px">To<input type="time" data-ti="' + i + '" data-f="end" value="' + esc(x.end || '') + '"></label>' +
+    '<label style="min-width:160px">Subject<input data-ti="' + i + '" data-f="subject" value="' + esc(x.subject || '') + '"></label><label style="min-width:80px;flex:0 0 90px">Room<input data-ti="' + i + '" data-f="room" value="' + esc(x.room || '') + '"></label>' +
+    '<label style="min-width:90px;flex:0 0 100px">For<select data-ti="' + i + '" data-f="section"><option value="">Everyone</option>' + SECS.map(k => '<option' + (x.section === k ? ' selected' : '') + '>' + esc(k) + '</option>').join('') + '</select></label>' +
+    '<label style="min-width:90px;flex:0 0 100px">Type<select data-ti="' + i + '" data-f="kind">' + ['lecture', 'lab', 'tutorial'].map(k => '<option' + (x.kind === k ? ' selected' : '') + '>' + k + '</option>').join('') + '</select></label>' +
+    '<button class="ghost" data-tdel="' + i + '">Remove</button></div>').join('') : '<p class="muted">No timetable yet.</p>';
+}
+async function loadTimetable() { try { TT = (await api('/api/admin/timetable')).slots || []; ttRows(); $('tmsg').textContent = TT.length ? TT.length + ' classes are set for everyone.' : ''; } catch (e) { /* offline */ } }
+document.addEventListener('input', e => { const t = e.target; if (t.dataset && t.dataset.ti !== undefined) TT[+t.dataset.ti][t.dataset.f] = t.dataset.f === 'day' ? +t.value : t.value; });
+document.addEventListener('click', e => { const d = e.target.closest('[data-tdel]'); if (d) { TT.splice(+d.dataset.tdel, 1); ttRows(); } });
+$('tadd').onclick = () => { TT.push({ day: 1, start: '09:00', end: '09:50', subject: '', room: '', code: '', kind: 'lecture', section: '' }); ttRows(); };
+$('tgo').onclick = async () => {
+  const f = $('tf').files[0]; if (!f) { $('tmsg').innerHTML = '<span class="err">Choose the timetable first.</span>'; return; }
+  $('tgo').disabled = true; $('tmsg').textContent = 'Reading it…';
+  try {
+    const r = await fetch('/api/admin/timetable/read?name=' + encodeURIComponent(f.name), { method: 'POST', headers: { ...hdr(), 'content-type': f.type || 'application/octet-stream' }, body: f });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || 'Server said ' + r.status);
+    TT = j.slots; ttRows(); $('tf').value = '';
+    $('tmsg').textContent = 'Found ' + TT.length + ' classes. Check them, fix anything wrong, then press Save for everyone.';
+  } catch (e) { $('tmsg').innerHTML = '<span class="err">' + esc(e.message) + '</span>'; }
+  $('tgo').disabled = false;
+};
+$('tsave').onclick = async () => {
+  const bad = TT.find(x => !x.subject || !x.start || !x.end);
+  if (bad) { $('tmsg').innerHTML = '<span class="err">Every row needs a subject, a start and an end time.</span>'; return; }
+  try { const r = await api('/api/admin/timetable', { slots: TT }); TT = r.slots; ttRows(); $('tmsg').textContent = 'Saved for the whole class (' + r.count + ' classes). It reaches everyone\'s phone within a minute.'; }
+  catch (e) { $('tmsg').innerHTML = '<span class="err">' + esc(e.message) + '</span>'; }
+};
+// ---- old chats ----
+let histTimer = null;
+const dt = ms => new Date(ms).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+function histStatus(st) {
+  const h = st.history || {}, j = h.job, g = st.readingGroups || [];
+  const sel = $('hg'), cur = sel.value;
+  sel.innerHTML = g.length ? g.map(n => '<option>' + esc(n) + '</option>').join('') : '<option value="">No group is being read yet</option>';
+  const saved = (() => { try { return JSON.parse(localStorage.getItem('class-hsel') || '{}'); } catch (e) { return {}; } })();
+  if (cur && g.includes(cur)) sel.value = cur; else if (saved.g && g.includes(saved.g)) sel.value = saved.g;
+  if (!$('hs').value && saved.s) $('hs').value = saved.s;
+  if (!$('hs').value) { const d = new Date(); $('hs').value = d.getFullYear() + (d.getMonth() >= 7 ? '-08-01' : '-01-01'); }
+  let t = '';
+  if (j && j.state === 'reading') t = 'Reading the file for "' + esc(j.group) + '"' + (j.progress ? ': ' + j.progress.done + ' of ' + j.progress.total + ' messages' : '') + '. You can leave this page; it keeps going.';
+  else if (j && j.state === 'failed') t = '<span class="err">Import failed: ' + esc(j.error) + '</span>';
+  else if (j && j.state === 'done' && j.stats) {
+    const s = j.stats;
+    t = 'Last import, "' + esc(j.group) + '": found ' + s.found + ' messages from ' + dt(s.oldest) + ' to ' + dt(s.newest) + '; ' + s.queued + ' queued after skipping chatter and anything before ' + dt(j.since) + '.' + (s.filesSkipped ? ' ' + s.filesSkipped + ' files were over the limit and left out.' : '');
+  }
+  if (h.pending) t += (t ? '<br>' : '') + '<b>' + h.pending + '</b> old messages are still waiting to be read. They are safe on the server, so a refresh loses nothing. It reads in the background, up to ' + h.dailyLimit + ' AI calls a day (' + h.usedToday + ' used today), so a big chat can take a few days. Cards appear in the app as they finish, without alerts.';
+  if (h.problem) t += (t ? '<br>' : '') + '<span class="err">Last problem: ' + esc(h.problem.msg) + '</span> Trying again at ' + new Date(h.problem.retryAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + '.';
+  if (h.pending && h.usedToday >= h.dailyLimit) t += (t ? '<br>' : '') + 'Today\'s share of AI calls for old chats is used up. It carries on tomorrow.';
+  if (resumeNote && !uploading) t = resumeNote + (t ? '<br>' + t : '');
+  if (!uploading) $('hmsg').innerHTML = t;
+  clearTimeout(histTimer);
+  if ((j && j.state === 'reading') || h.pending) histTimer = setTimeout(load, 5000);
+}
+
+
+function inviteText() {
+  const n = $('shname').value.trim() || 'our class', code = $('cc').value.trim(), link = location.origin + '/';
+  $('shcode').value = code; $('shlink').value = link;
+  return '\u{1F393} Join *' + n + '* on ClassFeed\n\nAll our deadlines, class cancellations, exam dates and notes from the WhatsApp groups, sorted in one place. No more scrolling through groups.\n\n1. Open: ' + link + '\n2. Class code: ' + code + '\n3. Add it to your home screen and turn on alerts\n\nTakes a minute.';
+}
+function showInvite() { try { localStorage.setItem('class-name', $('shname').value); } catch (e) {} $('shmsg').textContent = inviteText(); }
+try { $('shname').value = localStorage.getItem('class-name') || 'AI&DS 3rd semester'; } catch (e) { $('shname').value = 'AI&DS 3rd semester'; }
+$('shname').oninput = showInvite;
+$('shcopy').onclick = async () => { showInvite(); try { await navigator.clipboard.writeText(inviteText()); $('shnote').textContent = 'Copied. Paste it in the class group.'; } catch (e) { $('shnote').textContent = 'Could not copy. Select the text above and copy it.'; } };
+$('shshare').onclick = async () => { showInvite(); if (navigator.share) { try { await navigator.share({ text: inviteText() }); } catch (e) { /* closed */ } } else $('shnote').textContent = 'Sharing is not available here. Use Copy.'; };
+$('shwa').onclick = () => { showInvite(); window.open('https://wa.me/?text=' + encodeURIComponent(inviteText()), '_blank'); };
+async function loadPeopleAdmin() {
+  try {
+    const r = await api('/api/admin/people');
+    $('ppl').innerHTML = '<p class="muted" style="margin:0 0 6px"><b>' + r.people.length + '</b> people have joined. Remove a name that should not be there:</p>' + r.people.map(p => '<div class="row" style="align-items:center;padding:3px 0"><span style="flex:1">' + esc(p.name) + '</span><button class="ghost" data-pdel="' + esc(p.id) + '">Remove</button></div>').join('');
+  } catch (e) { /* not connected yet */ }
+}
+document.addEventListener('click', async e => { const d = e.target.closest('[data-pdel]'); if (!d) return; if (!confirm('Remove this person from the list?')) return; try { await api('/api/admin/people', { id: d.dataset.pdel }); loadPeopleAdmin(); } catch (x) { /* ignore */ } });
+
+function sjRow(s) {
+  return '<div class="row sjrow" style="margin-top:6px"><input type="hidden" data-k="was" value="' + esc(s.name || '') + '"><label>Name<input data-k="name" value="' + esc(s.name || '') + '"></label><label>Also called<input data-k="keys" value="' + esc(s.alias || '') + '" placeholder="COA, MAIC 205"></label></div>';
+}
+async function loadSubjects() { try { const r = await api('/api/admin/subjects'); $('sj').innerHTML = r.subjects.map(sjRow).join(''); } catch (e) { $('sjmsg').innerHTML = '<span class="err">' + esc(e.message) + '</span>'; } }
+$('sjadd').onclick = () => { $('sj').insertAdjacentHTML('beforeend', sjRow({})); };
+$('sjsave').onclick = async () => {
+  const subjects = Array.from(document.querySelectorAll('.sjrow')).map(r => ({ was: r.querySelector('[data-k=was]').value, name: r.querySelector('[data-k=name]').value, keys: r.querySelector('[data-k=keys]').value }));
+  try { const r = await api('/api/admin/subjects', { subjects }); $('sjmsg').textContent = 'Saved.' + (r.renamed ? ' ' + r.renamed + ' cards renamed.' : '') + (r.moved ? ' ' + r.moved + ' cards re-filed.' : ''); loadSubjects(); load(); } catch (e) { $('sjmsg').innerHTML = '<span class="err">' + esc(e.message) + '</span>'; }
+};
+
+let GK = [];
+let SECS = [], SUBS = [], REV_SIG = '', MAY_SIG = '';
+function gValue(g) { return g.kind === 'ignore' ? 'ignore' : g.kind === 'main' ? 'main' : g.kind === 'section' ? 'sec:' + g.section : 'sub:' + g.subject; }
+let GRP_SIG = '';
+function renderGroups(list) {
+  GK = list;
+  const gs = JSON.stringify(list) + SECS + SUBS;
+  if (gs === GRP_SIG || ($('gk').contains(document.activeElement) && document.activeElement !== document.body)) return;
+  GRP_SIG = gs;
+  const opts = g => { const v = gValue(g); const all = [['ignore', 'Ignore this group'], ['main', 'Whole class (sorted by what each message says)']]
+      .concat(SECS.map(x => ['sec:' + x, 'Section ' + x + ' group'])).concat(SUBS.map(x => ['sub:' + x, 'Subject: ' + x]));
+    if (!all.some(o => o[0] === v)) all.push([v, v]);
+    return all.map(o => '<option value="' + esc(o[0]) + '"' + (o[0] === v ? ' selected' : '') + '>' + esc(o[1]) + '</option>').join(''); };
+  $('gk').innerHTML = list.length ? list.map((g, i) => '<div style="border-top:1px solid #0002;padding:10px 0"><b>' + esc(g.name) + '</b><span class="muted"> ' + (g.reading ? esc(g.cards) + ' cards' : 'not being read') + (g.set ? '' : ' (guessed from its name)') + '</span>' +
+    '<div class="row" style="margin-top:6px;align-items:center"><select data-gset="' + i + '" style="flex:1;min-width:200px">' + opts(g) + '</select><button class="bad" data-gdel="' + i + '"' + (g.cards ? '' : ' disabled') + '>Delete everything</button></div></div>').join('') : '<p class="muted">The app has not seen any groups yet. Check that WhatsApp is connected.</p>';
+}
+document.addEventListener('change', async e => {
+  const el = e.target.closest && e.target.closest('[data-gset]'); if (!el) return;
+  const g = GK[+el.dataset.gset], v = el.value, body = { group: g.name };
+  if (v === 'ignore') body.mode = 'ignore'; else if (v === 'main') body.mode = 'main';
+  else if (v.startsWith('sec:')) { body.mode = 'section'; body.section = v.slice(4); } else { body.mode = 'subject'; body.subject = v.slice(4); }
+  try { await api('/api/admin/groupmap', body); $('gmsg').textContent = 'Saved for "' + g.name + '".'; el.blur(); GRP_SIG = ''; load(); }
+  catch (err) { $('gmsg').innerHTML = '<span class="err">' + esc(err.message) + '</span>'; }
+});
+document.addEventListener('click', async e => {
+  const d = e.target.closest('[data-gdel]');
+  if (!d) return;
+  const g = GK[+d.dataset.gdel];
+  try {
+    if (!confirm('Delete everything from "' + g.name + '" for everyone: its ' + g.cards + ' cards, saved messages and files? You can then upload the chat again with no duplicates. This cannot be undone.')) return;
+    const r = await api('/api/admin/groupcards', { group: g.name, confirm: 'yes' });
+    $('gmsg').textContent = 'Deleted ' + r.removed + ' cards, ' + r.messages + ' messages and ' + r.files + ' files. You can upload the chat again now.';
+    load();
+  } catch (err) { $('gmsg').innerHTML = '<span class="err">' + esc(err.message) + '</span>'; }
+});
+$('dgo').onclick = async () => {
+  const f = $('df').files[0]; if (!f) { $('dmsg').innerHTML = '<span class="err">Choose a file first.</span>'; return; }
+  $('dgo').disabled = true; $('dmsg').textContent = 'Uploading…';
+  try {
+    const r = await fetch('/api/admin/datesheet?kind=' + encodeURIComponent($('dk').value) + '&name=' + encodeURIComponent(f.name), { method: 'POST', headers: { 'x-class-code': $('cc').value.trim(), 'x-admin-code': $('ac').value.trim(), 'content-type': f.type || 'application/octet-stream' }, body: f });
+    const j = await r.json().catch(() => ({}));
+    $('dmsg').innerHTML = r.ok ? 'Uploaded. It is being read now. The exam cards appear in a minute or two.' : '<span class="err">' + esc(j.error || 'Server said ' + r.status) + '</span>';
+  } catch (e) { $('dmsg').innerHTML = '<span class="err">Upload failed. Check your connection.</span>'; }
+  $('dgo').disabled = false;
+};
+$('wgo').onclick = async () => {
+  try {
+    const reg = await navigator.serviceWorker.ready; const sub = await reg.pushManager.getSubscription();
+    if (!sub) { $('wmsg').innerHTML = '<span class="err">Alerts are not on for this phone. Open the app and turn them on first.</span>'; return; }
+    await api('/api/admin/pushme', { subscription: sub.toJSON() });
+    $('wmsg').textContent = 'Done. This phone will be warned if WhatsApp stops listening.';
+  } catch (e) { $('wmsg').innerHTML = '<span class="err">' + esc(e.message || 'Could not set that up') + '</span>'; }
+};
+// Upload in small pieces. The server remembers how far it got, so after a refresh or a dropped connection you pick the same file and it carries on.
+const UPK = 'class-upload', CHUNK = 4 * 1048576;
+const upGet = () => { try { return JSON.parse(localStorage.getItem(UPK) || 'null'); } catch (e) { return null; } };
+const upSet = v => { try { v ? localStorage.setItem(UPK, JSON.stringify(v)) : localStorage.removeItem(UPK); } catch (e) { /* private mode */ } };
+const newId = () => Array.from(crypto.getRandomValues(new Uint8Array(12)), b => b.toString(16).padStart(2, '0')).join('');
+const MB = n => (n / 1048576).toFixed(n > 1048576 * 10 ? 0 : 1);
+let uploading = false, resumeNote = '';
+window.addEventListener('beforeunload', e => { if (uploading) { e.preventDefault(); e.returnValue = ''; } });
+async function upSize(id) { const r = await fetch('/api/admin/upload?id=' + id, { headers: hdr() }); if (!r.ok) throw new Error('Server said ' + r.status); return (await r.json()).size; }
+async function sendPiece(id, offset, blob) {
+  for (let tries = 0; tries < 6; tries++) {
+    try {
+      const r = await fetch('/api/admin/upload?id=' + id + '&offset=' + offset, { method: 'POST', headers: hdr(), body: blob });
+      const j = await r.json().catch(() => ({}));
+      if (r.ok) return j.size;
+      if (r.status === 409 && typeof j.size === 'number') return j.size;   // the server is at a different place: carry on from there
+      if (r.status === 401 || r.status === 413) throw Object.assign(new Error(j.error || 'Not allowed'), { fatal: true });
+    } catch (e) { if (e.fatal) throw e; }
+    await new Promise(res => setTimeout(res, Math.min(8000, 800 * 2 ** tries)));   // a patch of bad signal: wait and try again
+  }
+  throw new Error('The connection keeps dropping. Your progress is saved. Choose the same file and press Upload to carry on.');
+}
+async function showResume() {
+  const st = upGet(); if (!st) return;
+  try {
+    const have = await upSize(st.id);
+    if (have >= st.size) return;
+    resumeNote = 'An upload of <b>' + esc(st.name) + '</b> stopped at ' + Math.round(have / st.size * 100) + '% (' + MB(have) + ' of ' + MB(st.size) + ' MB). Choose the same file again and press Upload to carry on from there.';
+    $('hmsg').innerHTML = resumeNote;
+    if (st.group) { $('hg').value = st.group; } if (st.since) $('hs').value = st.since;
+  } catch (e) { /* offline: nothing to show */ }
+}
+$('hg').onchange = $('hs').onchange = () => { try { localStorage.setItem('class-hsel', JSON.stringify({ g: $('hg').value, s: $('hs').value })); } catch (e) { /* ok */ } };
+$('hgo').onclick = async () => {
+  if (uploading) return;
+  const f = $('hf').files[0], g = $('hg').value, s = $('hs').value;
+  if (!g) { $('hmsg').innerHTML = '<span class="err">Pick a group first.</span>'; return; }
+  if (!s) { $('hmsg').innerHTML = '<span class="err">Pick the date your semester started.</span>'; return; }
+  if (!f) { $('hmsg').innerHTML = '<span class="err">Choose the exported file first.</span>'; return; }
+  if (!/\.(zip|txt)$/i.test(f.name)) { $('hmsg').innerHTML = '<span class="err">Upload the .zip or .txt file WhatsApp made.</span>'; return; }
+  let st = upGet();
+  if (!st || st.name !== f.name || st.size !== f.size) { st = { id: newId(), name: f.name, size: f.size, group: g, since: s }; }
+  st.group = g; st.since = s; upSet(st);
+  uploading = true; resumeNote = ''; $('hgo').disabled = true; $('hp').hidden = false;
+  try {
+    let have = await upSize(st.id);
+    if (have > f.size) have = 0;
+    while (have < f.size) {
+      $('hp').value = Math.round(have / f.size * 100);
+      $('hmsg').textContent = 'Uploading ' + MB(have) + ' of ' + MB(f.size) + ' MB. Keep this page open until it says Uploaded.';
+      have = await sendPiece(st.id, have, f.slice(have, Math.min(have + CHUNK, f.size)));
+    }
+    $('hp').value = 100; $('hmsg').textContent = 'Uploaded. Starting to read it…';
+    const r = await fetch('/api/admin/upload/finish?id=' + st.id + '&total=' + f.size + '&group=' + encodeURIComponent(g) + '&since=' + encodeURIComponent(s), { method: 'POST', headers: hdr() });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || 'Server said ' + r.status);
+    upSet(null); $('hf').value = ''; setTimeout(load, 1200);
+  } catch (e) { $('hmsg').innerHTML = '<span class="err">' + esc(e.message) + '</span>'; }
+  finally { uploading = false; $('hgo').disabled = false; $('hp').hidden = true; }
+};
+async function loadMaybe() {
+  try {
+    const r = await api('/api/admin/maybe');
+    // Not rebuilt while the CR is typing in it, or when nothing changed, so a half-written word is never wiped.
+    const sig = JSON.stringify(r.maybe.map(m => m.id)) + r.skippedWeek + JSON.stringify(r.words);
+    if (sig === MAY_SIG || ($('maybe').contains(document.activeElement) && document.activeElement !== document.body)) return;
+    MAY_SIG = sig;
+    $('mayhint').dataset.n = r.skippedWeek; $('maycount').textContent = r.maybe.length ? '(' + r.maybe.length + ')' : '';
+    $('maybe').innerHTML = (r.maybe.length ? '' : '<p class="muted">Nothing to check.</p>') +
+      '<p class="muted">' + esc(r.skippedWeek) + ' messages skipped this week' + (r.words.length ? '. Words you added: ' + r.words.map(esc).join(', ') : '') + '.</p>';
+    r.maybe.forEach(m => {
+      const d = document.createElement('div'); d.className = 'card';
+      d.innerHTML = '<p><small>' + esc(m.grp) + ' &middot; ' + esc(new Date(m.ms).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })) + ' &middot; ' + esc(m.sender) + '</small><br>' + esc(m.text) + '</p>' +
+        '<div class="row"><label>Word it should have caught (optional)<input data-w placeholder="e.g. viva"></label><button data-a="read">Read this</button><button class="ghost" data-a="skip">Fine to skip</button></div>';
+      d.addEventListener('click', async e => {
+        const a = e.target.dataset.a; if (!a) return;
+        try { await api('/api/admin/maybe', { id: m.id, action: a, word: d.querySelector('[data-w]').value.trim() }); d.remove(); MAY_SIG = ''; } catch (x) { $('msg').textContent = x.message; }
+      });
+      $('maybe').appendChild(d);
+    });
+  } catch (e) { $('msg').textContent = e.message; }
+}
+$('go').onclick = load;
+$('reroute').onclick = async () => { try { const r = await api('/api/admin/reroute', {}); $('msg').textContent = 'Re-filed ' + r.moved + ' cards. Pull to refresh in the app.'; load(); } catch (e) { $('msg').innerHTML = '<span class="err">' + esc(e.message) + '</span>'; } };
+let arm = false;
+$('newsem').onclick = async () => {
+  if (!arm) { arm = true; $('newsem').textContent = 'Tap again: this clears every card for everyone'; return; }
+  arm = false; $('newsem').textContent = 'Start a new semester';
+  try { await api('/api/admin/newsemester', { confirm: 'yes' }); load(); } catch (e) { $('msg').textContent = e.message; }
+};
+if ($('cc').value && $('ac').value) load().then(showResume);
+</script>
+</body>
+</html>

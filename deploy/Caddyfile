@@ -1,0 +1,5 @@
+# Gives the app a padlock (HTTPS), which phones need for the home-screen app and for alerts.
+# Replace the first line with your own domain name, then:  sudo systemctl reload caddy
+deadlines.yourdomain.com {
+    reverse_proxy localhost:3000
+}

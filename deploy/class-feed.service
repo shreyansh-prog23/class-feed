@@ -1,0 +1,17 @@
+# Keeps the feed running and restarts it after a reboot.
+# Save as /etc/systemd/system/class-feed.service, change User and the two paths, then:
+#   sudo systemctl daemon-reload && sudo systemctl enable --now class-feed
+[Unit]
+Description=Class feed
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=/home/ubuntu/class-feed
+ExecStart=/usr/bin/node --disable-warning=ExperimentalWarning src/main.js
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
